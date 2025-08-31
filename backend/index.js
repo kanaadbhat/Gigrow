@@ -7,6 +7,7 @@ import { requireAuth } from "./middlewares/auth.js";
 import { ensureUser } from "./middlewares/ensureUser.js";
 import userRoutes from "./routes/userRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import walletRoutes from "./routes/walletRoutes.js";
 
 //Express Setup 
 dotenv.config();
@@ -28,6 +29,8 @@ app.use(cookieParser());
 // Routes
 app.use("/api", userRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api", walletRoutes); // For webhooks endpoint
 
 // Health check route
 app.get("/", (req, res) => {
