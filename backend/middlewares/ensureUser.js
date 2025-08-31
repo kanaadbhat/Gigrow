@@ -10,16 +10,17 @@ export const ensureUser = async (req, res, next) => {
         const clerkId = req.auth.userId;
         
         // Get optional user data from headers (sent by frontend)
-        const name = req.headers['x-user-name'];
-        const email = req.headers['x-user-email'];
+        const name = req.headers['x-user-name'] || "Test User";
+        const email = req.headers['x-user-email'] || `${clerkId}@test.com`;
 
-        // Prepare update data (only include fields that exist)
+        // Prepare update data with defaults for test users
         const updateData = {
-            clerkId
+            clerkId,
+            name,
+            email
         };
-        
-        if (name) updateData.name = name;
-        if (email) updateData.email = email;
+
+        console.log("ensureUser: Looking for user with clerkId:", clerkId);
 
         // Upsert user: find by clerkId, update if exists, create if not
         const user = await User.findOneAndUpdate(
@@ -31,6 +32,8 @@ export const ensureUser = async (req, res, next) => {
                 setDefaultsOnInsert: true 
             }
         );
+
+        console.log("ensureUser: User found/created:", user._id.toString());
 
         // Attach user to request object
         req.me = user;

@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { requireAuth } from "./middlewares/auth.js";
 import { ensureUser } from "./middlewares/ensureUser.js";
 import userRoutes from "./routes/userRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
 
 //Express Setup 
 dotenv.config();
@@ -24,12 +25,9 @@ app.use(cors({
 }));    
 app.use(cookieParser());
 
-
-// Ensure User Middleware (auto-upsert user on authenticated requests)
-app.use(ensureUser);
-
 // Routes
 app.use("/api", userRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
