@@ -9,7 +9,9 @@ import {
     deleteTask,
     getMyTasks,
     acceptTask,
-    getAssignedTasks
+    getAssignedTasks,
+    requestCompletion,
+    confirmCompletion
 } from "../controllers/taskController.js";
 import {
     validateCreateTask,
@@ -36,6 +38,12 @@ router.get("/assigned", requireAuth, ensureUser, getAssignedTasks);
 
 // POST /api/tasks/:id/accept - Accept a task
 router.post("/:id/accept", requireAuth, ensureUser, validateTaskId, acceptTask);
+
+// POST /api/tasks/:id/complete/request - Request task completion (worker only)
+router.post("/:id/complete/request", requireAuth, ensureUser, validateTaskId, requestCompletion);
+
+// POST /api/tasks/:id/complete/confirm - Confirm task completion (owner only)
+router.post("/:id/complete/confirm", requireAuth, ensureUser, validateTaskId, confirmCompletion);
 
 // GET /api/tasks/:id - Get single task by ID
 router.get("/:id", validateTaskId, getTaskById);

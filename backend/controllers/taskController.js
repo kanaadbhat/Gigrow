@@ -339,3 +339,211 @@ export const getAssignedTasks = asyncHandler(async (req, res) => {
         }
     });
 });
+
+// Worker requests completion
+export const requestCompletion = asyncHandler(async (req, res) => {
+    const task = await Task.findById(req.params.id)
+        .populate('postedBy', 'name email')
+        .populate('assignedTo', 'name email');
+
+    if (!task) {
+        return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+        });
+    }
+
+    // Check if task is assigned
+    if (task.status !== 'assigned') {
+        return res.status(400).json({
+            success: false,
+            error: 'Task must be assigned to request completion',
+            currentStatus: task.status
+        });
+    }
+
+    // Check if current user is the assigned worker
+    const isAssignedWorker = task.assignedTo.some(worker => 
+        worker._id.toString() === req.me._id.toString()
+    );
+
+    if (!isAssignedWorker) {
+        return res.status(403).json({
+            success: false,
+            error: 'Only the assigned worker can request completion'
+        });
+    }
+
+    // Check if completion already requested
+    if (task.meta && task.meta.workerRequested) {
+        return res.status(400).json({
+            success: false,
+            error: 'Completion has already been requested'
+        });
+    }
+
+    try {
+        // Update task meta to mark completion requested
+        if (!task.meta) task.meta = {};
+        task.meta.workerRequested = true;
+        task.meta.completionRequestedAt = new Date();
+        await task.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Completion request submitted successfully',
+            task
+        });
+    } catch (error) {
+        console.error("Error requesting completion:", error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to request completion',
+            message: error.message
+        });
+    }
+});
+
+// Owner confirms completion and processes payout
+export const confirmCompletion = asyncHandler(async (req, res) => {
+    const task = await Task.findById(req.params.id)
+        .populate('postedBy', 'name email')
+        .populate('assignedTo', 'name email');
+
+    if (!task) {
+        return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+        });
+    }
+
+    // Check if current user is the task owner
+    if (task.postedBy._id.toString() !== req.me._id.toString()) {
+        return res.status(403).json({
+            success: false,
+            error: 'Only the task owner can confirm completion'
+        });
+    }
+
+    // Check if task is assigned
+    if (task.status !== 'assigned') {
+        return res.status(400).json({
+            success: false,
+            error: 'Task must be assigned to confirm completion',
+            currentStatus: task.status
+        });
+    }
+
+    // Check if worker has requested completion
+    if (!task.meta || !task.meta.workerRequested) {
+        return res.status(400).json({
+            success: false,
+            error: 'Worker must request completion first'
+        });
+    }
+
+    // Concurrency guard - check status again
+    const currentTask = await Task.findById(req.params.id);
+    if (currentTask.status !== 'assigned') {
+        return res.status(400).json({
+            success: false,
+            error: 'Task status changed during processing'
+        });
+    }
+
+    try {
+        // Find the wallet lock for this task
+        const walletLock = await WalletLock.findOne({ task: task._id });
+        if (!walletLock) {
+            return res.status(500).json({
+                success: false,
+                error: 'Wallet lock not found for this task'
+            });
+        }
+
+        // Calculate payout amounts
+        const finalReward = task.reward;
+        const used = finalReward;
+        const refund = Math.max(0, walletLock.maxLocked - used);
+
+        // Get worker (first assignee for MVP)
+        const worker = await User.findById(task.assignedTo[0]._id);
+        const poster = await User.findById(task.postedBy._id);
+
+        if (!worker || !poster) {
+            return res.status(500).json({
+                success: false,
+                error: 'Worker or poster not found'
+            });
+        }
+
+        // Update wallet lock
+        walletLock.used = used;
+        await walletLock.save();
+
+        // Credit worker with the final reward
+        worker.coins += used;
+        await worker.save();
+
+        // Create payout transaction for worker
+        const payoutTransaction = new Transaction({
+            user: worker._id,
+            kind: "payout",
+            amount: used,
+            meta: {
+                taskId: task._id.toString(),
+                taskTitle: task.title,
+                fromUser: poster._id.toString(),
+                walletLockId: walletLock._id.toString()
+            }
+        });
+        await payoutTransaction.save();
+
+        // Refund unused amount to poster if any
+        let refundTransaction = null;
+        if (refund > 0) {
+            poster.coins += refund;
+            await poster.save();
+
+            refundTransaction = new Transaction({
+                user: poster._id,
+                kind: "refund",
+                amount: refund,
+                meta: {
+                    taskId: task._id.toString(),
+                    taskTitle: task.title,
+                    originalLocked: walletLock.maxLocked,
+                    finalUsed: used,
+                    walletLockId: walletLock._id.toString()
+                }
+            });
+            await refundTransaction.save();
+        }
+
+        // Update task status to completed
+        task.status = 'completed';
+        task.meta.completedAt = new Date();
+        task.meta.confirmedBy = poster._id;
+        await task.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Task completed and payment processed successfully',
+            task,
+            payoutInfo: {
+                workerPaid: used,
+                refundToOwner: refund,
+                workerNewBalance: worker.coins,
+                ownerNewBalance: poster.coins
+            }
+        });
+
+    } catch (error) {
+        console.error("Error confirming completion:", error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process completion',
+            message: error.message
+        });
+    }
+});

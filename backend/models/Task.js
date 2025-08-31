@@ -90,6 +90,10 @@ const taskSchema = new mongoose.Schema({
         default: "open", 
         index: true 
     },
+    meta: {
+        type: Object,
+        default: {}
+    },
     createdAt: { 
         type: Date, 
         default: Date.now,

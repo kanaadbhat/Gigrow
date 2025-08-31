@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 function generateTestToken() {
-  const userId = "user_323WVCkin29TDPyKltxfwuIfpaG";
+  const userId = "user_323dyYIkkZJsxCAkztLDvxiK1zV";
   
   // Create a test JWT that mimics Clerk's structure
   const payload = {
@@ -38,3 +38,7 @@ function generateTestToken() {
 }
 
 generateTestToken();
+
+
+//user1 token : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzMyM1dWQ2tpbjI5VERQeUtsdHhmd3VJZnBhRyIsImlzcyI6Imh0dHBzOi8vdGVzdC1jbGVyay5kZXYiLCJhdWQiOiJ0ZXN0LWF1ZGllbmNlIiwiZXhwIjoxNzU2NzM2NDU2LCJpYXQiOjE3NTY2NTAwNTYsInNpZCI6InNlc3NfdGVzdF8xNzU2NjUwMDU2MDA4IiwidXNlcklkIjoidXNlcl8zMjNXVkNraW4yOVREUHlLbHR4Znd1SWZwYUcifQ.Nr9_ZR1u4Q8V604x3Zlw8wIYCTt5LDSSY3kgl-sFo6w      
+//user2 token : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzMyM2R5WUlra1pKc3hDQWt6dExEdnhpSzF6ViIsImlzcyI6Imh0dHBzOi8vdGVzdC1jbGVyay5kZXYiLCJhdWQiOiJ0ZXN0LWF1ZGllbmNlIiwiZXhwIjoxNzU2NzQ0NDgzLCJpYXQiOjE3NTY2NTgwODMsInNpZCI6InNlc3NfdGVzdF8xNzU2NjU4MDgzMDcwIiwidXNlcklkIjoidXNlcl8zMjNkeVlJa2taSnN4Q0FrenRMRHZ4aUsxelYifQ.iTtefGi8tQcYtBk-Ta6MNES40mzCYL8PGKL8ZeG59PA
