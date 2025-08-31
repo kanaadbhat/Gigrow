@@ -33,7 +33,6 @@ const walletLockSchema = new mongoose.Schema({
 
 // Create compound indexes
 walletLockSchema.index({ owner: 1, task: 1 });
-walletLockSchema.index({ task: 1 });
 
 // Ensure used amount doesn't exceed maxLocked
 walletLockSchema.pre('save', function(next) {

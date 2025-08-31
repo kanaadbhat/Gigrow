@@ -7,7 +7,9 @@ import {
     getTaskById,
     updateTask,
     deleteTask,
-    getMyTasks
+    getMyTasks,
+    acceptTask,
+    getAssignedTasks
 } from "../controllers/taskController.js";
 import {
     validateCreateTask,
@@ -28,6 +30,12 @@ router.post("/", requireAuth, ensureUser, validateCreateTask, createTask);
 
 // GET /api/tasks/my - Get tasks posted by current user
 router.get("/my", requireAuth, ensureUser, getMyTasks);
+
+// GET /api/tasks/assigned - Get tasks assigned to current user
+router.get("/assigned", requireAuth, ensureUser, getAssignedTasks);
+
+// POST /api/tasks/:id/accept - Accept a task
+router.post("/:id/accept", requireAuth, ensureUser, validateTaskId, acceptTask);
 
 // GET /api/tasks/:id - Get single task by ID
 router.get("/:id", validateTaskId, getTaskById);
