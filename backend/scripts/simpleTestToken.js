@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 function generateTestToken() {
-  const userId = "user_323dyYIkkZJsxCAkztLDvxiK1zV";
+  const userId = "user_323WVCkin29TDPyKltxfwuIfpaG";
   
   // Create a test JWT that mimics Clerk's structure
   const payload = {

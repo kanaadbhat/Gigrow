@@ -107,6 +107,7 @@ const taskSchema = new mongoose.Schema({
 taskSchema.index({ status: 1, type: 1, urgency: 1, createdAt: -1 });
 taskSchema.index({ postedBy: 1, status: 1 });
 taskSchema.index({ assignedTo: 1, status: 1 });
+taskSchema.index({ status: 1, autoIncrement: 1 }); // For cron job efficiency
 
 // Validation: if autoIncrement is true, maxCap should be >= reward
 taskSchema.pre('save', function(next) {

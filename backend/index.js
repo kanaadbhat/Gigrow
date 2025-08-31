@@ -8,6 +8,7 @@ import { ensureUser } from "./middlewares/ensureUser.js";
 import userRoutes from "./routes/userRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
+import { startRewardCron } from "./cron/rewardIncrementer.js";
 
 //Express Setup 
 dotenv.config();
@@ -50,5 +51,10 @@ export const razorpayInstance = new Razorpay({
 
 app.listen(process.env.PORT || 8000 , ()=> {
     connectDB();
+    
+    // Start the reward increment cron job after DB connection
+    startRewardCron();
+    
     console.log(`Server listening on ${process.env.PORT || 8000}`)
+    console.log(`MongoDb Connected`)
 })
