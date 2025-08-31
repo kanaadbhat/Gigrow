@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import withdrawalRoutes from "./routes/withdrawalRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 import { startRewardCron } from "./cron/rewardIncrementer.js";
 
 //Express Setup 
@@ -34,6 +35,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api", walletRoutes); // For webhooks endpoint
 app.use("/api/withdrawals", withdrawalRoutes);
+app.use("/api/stats", statsRoutes);
 
 // Health check route
 app.get("/", (req, res) => {

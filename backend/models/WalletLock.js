@@ -4,14 +4,12 @@ const walletLockSchema = new mongoose.Schema({
     owner: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: "User", 
-        required: true,
-        index: true
+        required: true
     },
     task: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: "Task", 
-        required: true,
-        index: true
+        required: true
     },
     maxLocked: { 
         type: Number, 

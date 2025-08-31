@@ -90,6 +90,11 @@ const taskSchema = new mongoose.Schema({
         default: "open", 
         index: true 
     },
+    views: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
     meta: {
         type: Object,
         default: {}
@@ -105,9 +110,15 @@ const taskSchema = new mongoose.Schema({
 
 // Compound indexes for efficient querying
 taskSchema.index({ status: 1, type: 1, urgency: 1, createdAt: -1 });
-taskSchema.index({ postedBy: 1, status: 1 });
 taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ status: 1, autoIncrement: 1 }); // For cron job efficiency
+
+// Text search indexes
+taskSchema.index({ title: 'text', description: 'text' });
+
+// Sorting indexes
+taskSchema.index({ reward: -1 }); // For reward sorting
+taskSchema.index({ views: -1 }); // For views sorting
 
 // Validation: if autoIncrement is true, maxCap should be >= reward
 taskSchema.pre('save', function(next) {

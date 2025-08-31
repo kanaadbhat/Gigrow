@@ -78,9 +78,17 @@ export const createTask = asyncHandler(async (req, res) => {
     }
 });
 
-// Get all tasks with filters
+// Get all tasks with filters, search, pagination, and sorting
 export const getTasks = asyncHandler(async (req, res) => {
-    const { status, type, urgency, q, page = 1, limit = 10 } = req.query;
+    const { 
+        status, 
+        type, 
+        urgency, 
+        q, 
+        page = 1, 
+        limit = 20, 
+        sort = 'recent' 
+    } = req.query;
     
     // Build filter object
     const filter = {};
@@ -88,8 +96,8 @@ export const getTasks = asyncHandler(async (req, res) => {
     if (type) filter.type = type;
     if (urgency) filter.urgency = urgency;
     
-    // Add text search for title and description
-    if (q) {
+    // Add text search for title and description (case-insensitive regex)
+    if (q && q.trim() !== '') {
         filter.$or = [
             { title: { $regex: q, $options: 'i' } },
             { description: { $regex: q, $options: 'i' } }
@@ -99,11 +107,30 @@ export const getTasks = asyncHandler(async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    // Get tasks with pagination
+    // Determine sort order
+    let sortOption = {};
+    switch (sort) {
+        case 'recent':
+            sortOption = { createdAt: -1 };
+            break;
+        case 'reward':
+            sortOption = { reward: 1 }; // Low to high
+            break;
+        case '-reward':
+            sortOption = { reward: -1 }; // High to low
+            break;
+        case 'views':
+            sortOption = { views: -1 }; // Most viewed first
+            break;
+        default:
+            sortOption = { createdAt: -1 };
+    }
+    
+    // Get tasks with pagination and sorting
     const tasks = await Task.find(filter)
         .populate('postedBy', 'name email')
         .populate('assignedTo', 'name email')
-        .sort({ createdAt: -1 })
+        .sort(sortOption)
         .skip(skip)
         .limit(parseInt(limit));
 
@@ -119,7 +146,9 @@ export const getTasks = asyncHandler(async (req, res) => {
             totalTasks: total,
             hasNext: skip + tasks.length < total,
             hasPrev: parseInt(page) > 1
-        }
+        },
+        searchQuery: (q && q.trim() !== '') ? q : null,
+        sortBy: sort
     });
 });
 
@@ -139,6 +168,30 @@ export const getTaskById = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         task
+    });
+});
+
+// Increment task view counter (no auth required)
+export const incrementTaskViews = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const task = await Task.findByIdAndUpdate(
+        id,
+        { $inc: { views: 1 } },
+        { new: true }
+    ).select('views');
+
+    if (!task) {
+        return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'View count incremented',
+        views: task.views
     });
 });
 

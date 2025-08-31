@@ -174,8 +174,13 @@ export const validateTaskQuery = [
     
     query('q')
         .optional()
-        .isLength({ min: 1, max: 100 })
-        .withMessage('Search query must be between 1 and 100 characters'),
+        .custom((value) => {
+            // Allow empty string or strings between 1-100 characters
+            if (value === '' || (value && value.length >= 1 && value.length <= 100)) {
+                return true;
+            }
+            throw new Error('Search query must be empty or between 1 and 100 characters');
+        }),
     
     query('page')
         .optional()

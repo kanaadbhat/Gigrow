@@ -1,0 +1,558 @@
+{
+  "info": {
+    "name": "PROMPT 7 - Withdrawal System Tests",
+    "description": "Complete test suite for auto-withdrawal system with admin fees",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "userToken",
+      "value": "test_user_123"
+    },
+    {
+      "key": "adminSecret",
+      "value": "hedbrhdh4redbxhrd"
+    },
+    {
+      "key": "withdrawalId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. SETUP - Add Test Coins to User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 1000\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/add-coins",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "add-coins"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Coins added successfully', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.user.coins).to.be.at.least(1000);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. USER - Check Initial Balance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/balance",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "balance"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Balance retrieved successfully', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.balance).to.be.a('number');",
+              "    pm.globals.set('initialBalance', jsonData.balance);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. USER - Request Withdrawal (100 coins, 3% fee)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 100,\n  \"feeBps\": 300\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Withdrawal processed successfully', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.withdrawal.status).to.eql('completed');",
+              "    pm.expect(jsonData.withdrawal.amount).to.eql(100);",
+              "    pm.expect(jsonData.withdrawal.feeAmount).to.eql(3);",
+              "    pm.expect(jsonData.withdrawal.netAmount).to.eql(97);",
+              "    ",
+              "    // Store withdrawal ID for later tests",
+              "    pm.collectionVariables.set('withdrawalId', jsonData.withdrawal._id);",
+              "});",
+              "",
+              "pm.test('User balance decreased correctly', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const initialBalance = pm.globals.get('initialBalance');",
+              "    pm.expect(jsonData.user.coins).to.eql(initialBalance - 100);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. USER - Try Invalid Withdrawal (Negative Amount)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": -50\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message for negative amount', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error).to.include('positive number');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. USER - Try Withdrawal Above Maximum (15000 coins)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 15000\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message for maximum limit', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error).to.include('Maximum withdrawal amount is 10,000');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. USER - Try Withdrawal Without Sufficient Balance",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 9999\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message for insufficient balance', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error).to.include('Insufficient balance');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. USER - Get My Withdrawal History",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals/my",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals", "my"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Withdrawal history retrieved', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.withdrawals).to.be.an('array');",
+              "    pm.expect(jsonData.withdrawals.length).to.be.at.least(1);",
+              "    ",
+              "    // Check first withdrawal details",
+              "    const withdrawal = jsonData.withdrawals[0];",
+              "    pm.expect(withdrawal.amount).to.eql(100);",
+              "    pm.expect(withdrawal.status).to.eql('completed');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. USER - Get Transaction History",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/transactions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "transactions"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Transaction history includes withdrawal', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.transactions).to.be.an('array');",
+              "    ",
+              "    // Find withdrawal transaction",
+              "    const withdrawalTx = jsonData.transactions.find(tx => tx.kind === 'withdraw');",
+              "    pm.expect(withdrawalTx).to.not.be.undefined;",
+              "    pm.expect(withdrawalTx.amount).to.eql(100);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. ADMIN - Check Revenue Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-admin-secret",
+            "value": "{{adminSecret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals/admin/revenue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals", "admin", "revenue"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Admin revenue data retrieved', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.revenue).to.be.an('object');",
+              "    pm.expect(jsonData.revenue.totalWithdrawals).to.be.at.least(1);",
+              "    pm.expect(jsonData.revenue.totalFees).to.be.at.least(3);",
+              "    pm.expect(jsonData.platformStats).to.be.an('object');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. ADMIN - Try Access Without Auth",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals/admin/revenue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals", "admin", "revenue"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Unauthorized access blocked', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error).to.include('Admin secret required');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. USER - Multiple Withdrawals Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 50,\n  \"feeBps\": 500\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Second withdrawal with different fee rate', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.withdrawal.amount).to.eql(50);",
+              "    pm.expect(jsonData.withdrawal.feeAmount).to.eql(2.5); // 5% of 50",
+              "    pm.expect(jsonData.withdrawal.netAmount).to.eql(47.5);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. USER - Check Updated Balance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/balance",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "balance"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Balance reduced by total withdrawals', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const initialBalance = pm.globals.get('initialBalance');",
+              "    // Initial: 1000, Withdrawn: 100 + 50 = 150",
+              "    pm.expect(jsonData.balance).to.eql(initialBalance - 150);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. ADMIN - Final Revenue Check",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-admin-secret",
+            "value": "{{adminSecret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/withdrawals/admin/revenue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "withdrawals", "admin", "revenue"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Admin revenue updated with both withdrawals', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "    pm.expect(jsonData.revenue.totalWithdrawals).to.be.at.least(2);",
+              "    // Total fees: 3 (from 100 @ 3%) + 2.5 (from 50 @ 5%) = 5.5",
+              "    pm.expect(jsonData.revenue.totalFees).to.be.at.least(5.5);",
+              "    pm.expect(jsonData.platformStats.adminCoins).to.be.at.least(5.5);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -65,8 +65,6 @@ const withdrawalSchema = new mongoose.Schema({
 // Compound indexes for efficient querying
 withdrawalSchema.index({ user: 1, status: 1, createdAt: -1 });
 withdrawalSchema.index({ status: 1, createdAt: -1 });
-withdrawalSchema.index({ transactionId: 1 });
-withdrawalSchema.index({ adminFeeTransactionId: 1 });
 
 // Virtual for calculated fee amount
 withdrawalSchema.virtual('feeAmount').get(function() {

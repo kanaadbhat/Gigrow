@@ -11,7 +11,8 @@ import {
     acceptTask,
     getAssignedTasks,
     requestCompletion,
-    confirmCompletion
+    confirmCompletion,
+    incrementTaskViews
 } from "../controllers/taskController.js";
 import {
     validateCreateTask,
@@ -25,6 +26,9 @@ const router = express.Router();
 // Public routes (no auth required)
 // GET /api/tasks - List all tasks with filters
 router.get("/", validateTaskQuery, getTasks);
+
+// PATCH /api/tasks/:id/view - Increment task view counter (no auth)
+router.patch("/:id/view", incrementTaskViews);
 
 // Protected routes (auth required)
 // POST /api/tasks - Create a new task

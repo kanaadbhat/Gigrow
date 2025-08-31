@@ -39,8 +39,6 @@ const transactionSchema = new mongoose.Schema({
 });
 
 // Create compound indexes for better query performance
-transactionSchema.index({ user: 1, kind: 1 });
-transactionSchema.index({ user: 1, createdAt: -1 });
 transactionSchema.index({ "metadata.razorpay_payment_id": 1 }); // For idempotency checks
 
 export const Transaction = mongoose.model("Transaction", transactionSchema);
