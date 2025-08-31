@@ -8,6 +8,7 @@ import { ensureUser } from "./middlewares/ensureUser.js";
 import userRoutes from "./routes/userRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
+import withdrawalRoutes from "./routes/withdrawalRoutes.js";
 import { startRewardCron } from "./cron/rewardIncrementer.js";
 
 //Express Setup 
@@ -22,7 +23,7 @@ app.use(cors({
     origin: process.env.CLIENT_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'x-user-name', 'x-user-email'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'x-user-name', 'x-user-email', 'x-admin-secret'],
     exposedHeaders: ['Set-Cookie']
 }));    
 app.use(cookieParser());
@@ -32,6 +33,7 @@ app.use("/api", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api", walletRoutes); // For webhooks endpoint
+app.use("/api/withdrawals", withdrawalRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
@@ -53,7 +55,7 @@ app.listen(process.env.PORT || 8000 , ()=> {
     connectDB();
     
     // Start the reward increment cron job after DB connection
-    startRewardCron();
+    //startRewardCron();
     
     console.log(`Server listening on ${process.env.PORT || 8000}`)
     console.log(`MongoDb Connected`)

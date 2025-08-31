@@ -36,7 +36,7 @@ export const ensureUser = async (req, res, next) => {
         console.log("ensureUser: User found/created:", user._id.toString());
 
         // Attach user to request object
-        req.me = user;
+        req.user = user;
         
         next();
     } catch (error) {

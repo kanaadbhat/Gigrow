@@ -20,14 +20,14 @@ export const createWalletOrder = asyncHandler(async (req, res) => {
     const amountInPaise = Math.round(amount * 100);
 
     // Generate unique receipt (max 40 chars for Razorpay)
-    const shortId = req.me._id.toString().slice(-8); // last 8 chars of user id
+    const shortId = req.user._id.toString().slice(-8); // last 8 chars of user id
     const receipt = `w_${shortId}_${Date.now().toString().slice(-6)}`;
 
     try {
         // Create Razorpay order
         const order = await createOrder(amountInPaise, receipt, {
             notes: {
-                userId: req.me._id.toString(),
+                userId: req.user._id.toString(),
                 purpose: "wallet_topup",
                 coins: amount
             }
@@ -180,16 +180,16 @@ export const getWalletInfo = asyncHandler(async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Get user's current coin balance
-    const user = await User.findById(req.me._id).select('coins');
+    const user = await User.findById(req.user._id).select('coins');
 
     // Get transaction history
-    const transactions = await Transaction.find({ user: req.me._id })
+    const transactions = await Transaction.find({ user: req.user._id })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .select('kind amount meta createdAt');
 
-    const totalTransactions = await Transaction.countDocuments({ user: req.me._id });
+    const totalTransactions = await Transaction.countDocuments({ user: req.user._id });
 
     res.status(200).json({
         success: true,

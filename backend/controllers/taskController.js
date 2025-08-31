@@ -8,14 +8,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const createTask = asyncHandler(async (req, res) => {
     const taskData = {
         ...req.body,
-        postedBy: req.me._id
+        postedBy: req.user._id
     };
 
     // Determine how much to lock
     const maxLocked = taskData.autoIncrement ? taskData.maxCap : taskData.reward;
 
     // Check if poster has enough coins
-    const poster = await User.findById(req.me._id);
+    const poster = await User.findById(req.user._id);
     if (poster.coins < maxLocked) {
         return res.status(400).json({
             success: false,
@@ -36,7 +36,7 @@ export const createTask = asyncHandler(async (req, res) => {
 
         // Create wallet lock
         const walletLock = new WalletLock({
-            owner: req.me._id,
+            owner: req.user._id,
             task: task._id,
             maxLocked: maxLocked,
             used: 0
@@ -45,7 +45,7 @@ export const createTask = asyncHandler(async (req, res) => {
 
         // Create transaction record
         const transaction = new Transaction({
-            user: req.me._id,
+            user: req.user._id,
             kind: "spend_lock",
             amount: maxLocked,
             meta: {
@@ -154,7 +154,7 @@ export const updateTask = asyncHandler(async (req, res) => {
     }
 
     // Check if user is the owner
-    if (task.postedBy.toString() !== req.me._id.toString()) {
+    if (task.postedBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({
             success: false,
             error: 'You can only update your own tasks'
@@ -196,7 +196,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
     }
 
     // Check if user is the owner
-    if (task.postedBy.toString() !== req.me._id.toString()) {
+    if (task.postedBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({
             success: false,
             error: 'You can only delete your own tasks'
@@ -223,7 +223,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
 export const getMyTasks = asyncHandler(async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     
-    const filter = { postedBy: req.me._id };
+    const filter = { postedBy: req.user._id };
     if (status) filter.status = status;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -271,7 +271,7 @@ export const acceptTask = asyncHandler(async (req, res) => {
     }
 
     // Check if user is trying to accept their own task
-    if (task.postedBy._id.toString() === req.me._id.toString()) {
+    if (task.postedBy._id.toString() === req.user._id.toString()) {
         return res.status(400).json({
             success: false,
             error: 'You cannot accept your own task'
@@ -288,7 +288,7 @@ export const acceptTask = asyncHandler(async (req, res) => {
 
     try {
         // Update task: assign to current user and change status
-        task.assignedTo = [req.me._id];
+        task.assignedTo = [req.user._id];
         task.status = 'assigned';
         await task.save();
 
@@ -314,7 +314,7 @@ export const acceptTask = asyncHandler(async (req, res) => {
 export const getAssignedTasks = asyncHandler(async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     
-    const filter = { assignedTo: req.me._id };
+    const filter = { assignedTo: req.user._id };
     if (status) filter.status = status;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -364,7 +364,7 @@ export const requestCompletion = asyncHandler(async (req, res) => {
 
     // Check if current user is the assigned worker
     const isAssignedWorker = task.assignedTo.some(worker => 
-        worker._id.toString() === req.me._id.toString()
+        worker._id.toString() === req.user._id.toString()
     );
 
     if (!isAssignedWorker) {
@@ -418,7 +418,7 @@ export const confirmCompletion = asyncHandler(async (req, res) => {
     }
 
     // Check if current user is the task owner
-    if (task.postedBy._id.toString() !== req.me._id.toString()) {
+    if (task.postedBy._id.toString() !== req.user._id.toString()) {
         return res.status(403).json({
             success: false,
             error: 'Only the task owner can confirm completion'
